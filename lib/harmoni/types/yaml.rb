@@ -16,7 +16,7 @@ module Harmoni
     end
 
     def save
-      configuration.to_yaml.to_file(path, mode: 'w')
+      configuration.to_h.to_yaml.to_file(path, mode: 'w')
     end
 
     def load_config
