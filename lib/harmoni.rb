@@ -3,6 +3,7 @@ require 'json'
 require 'yaml'
 
 require_relative 'harmoni/version'
+require_relative 'harmoni/event'
 require_relative 'harmoni/config'
 require_relative 'harmoni/types'
 

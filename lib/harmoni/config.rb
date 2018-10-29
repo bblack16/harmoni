@@ -30,6 +30,8 @@ module Harmoni
     attr_of Proc, :on_reload, default: nil, allow_nil: true
     # Hook that is called any time reload is called and makes actual changes
     attr_of Proc, :on_change, default: nil, allow_nil: true
+    # Register arbitrary events to matching keys or has path patterns
+    attr_ary_of Event, :events, add_rem: true, adder_name: 'add_event', remover_name: 'remove_event'
 
     after :sync_up, :watch_file
     before :configuration=, :detect_changes, send_args: true
@@ -52,8 +54,10 @@ module Harmoni
     # Set a single key value pair or merge in a hash. Keys can use hash path notation
     def set(key = nil, value = nil, **opts)
       if key
+        detect_changes({ key => value }.expand)
         configuration.hpath_set(key => value)
       else
+        detect_changes(opts.expand)
         opts.each do |k, v|
           configuration.hpath_set(k => v)
         end
@@ -99,6 +103,11 @@ module Harmoni
       self.configuration = {}
     end
 
+    # Convenience wrapper for adding an event
+    def on(key, &block)
+      add_event(Event.new(key, &block))
+    end
+
     # Turn on sync up and down in one call for convenience
     def sync(toggle)
       self.sync_up = toggle
@@ -134,6 +143,10 @@ module Harmoni
       true
     end
 
+    def to_tree_hash
+      configuration.to_tree_hash
+    end
+
     protected
 
     def simple_postinit(*args)
@@ -161,10 +174,18 @@ module Harmoni
 
     # Determine what has changed after performing a reload to trigger the on_change hook.
     def detect_changes(hash)
-      return unless on_change && @configuration
-      changes = configuration.squish.to_a.diff(hash.squish.to_a).to_h.expand
+      return unless (!events.empty? || on_change) && @configuration
+      squished = hash.squish
+      changes = configuration.squish.to_a.diff(squished.to_a).to_h.only(*squished.keys).expand
       return if changes.empty?
       on_change.call(hash, changes)
+      trigger_events(changes)
+    end
+
+    def trigger_events(changes)
+      events.each do |event|
+        event.call(changes)
+      end
     end
 
     # Processes configuration and converts it to a HashStruct internally
