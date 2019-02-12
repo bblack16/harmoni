@@ -30,7 +30,7 @@ module Harmoni
     attr_of Proc, :on_reload, default: nil, allow_nil: true
     # Hook that is called any time reload is called and makes actual changes
     attr_of Proc, :on_change, default: nil, allow_nil: true
-    # Register arbitrary events to matching keys or has path patterns
+    # Register arbitrary events to match keys or hash path patterns
     attr_ary_of Event, :events, add_rem: true, adder_name: 'add_event', remover_name: 'remove_event'
 
     after :sync_up, :watch_file
@@ -126,7 +126,7 @@ module Harmoni
     def load_config
       # Nothing in base class. This should be used to load the configuration from
       # disk if saved to a file.
-      {}
+      configuration || {}
     end
 
     # Reload the configuration from disk and merge it in
